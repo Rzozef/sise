@@ -13,7 +13,7 @@ START_PUZZLE = [[1, 3, 4, 8],
                 [13, 10, 14, 15]]
 # todo start_puzzle ma byc argumentem wywolania, narazie na sztywno do testow
 ZERO_FIELD = {}
-DEPTH = 30
+DEPTH = 25
 
 
 class Node:
@@ -137,37 +137,39 @@ def bfs(start_time):
     return False
 
 
-# todo poprawic dfs, dostosowac bfs do wymagan Dodatkowo w przypadku strategii "w głąb" należy ustalić maksymalną
-#  dozwoloną głębokość rekursji, która nie może być mniejsza niż 20 (wartość tę można wpisać na sztywno do programu).
-#  W sytuacji, gdy program osiągnie taką głębokość nie znalazłszy rozwiązania, powinien wykonać nawrót.
-def dfs():
+# todo przemyslec gdzie wstawic processed i visited
+def dfs(start_time):
+    visited = 1
+    processed = 1
     current_node = Node(START_PUZZLE, 'parentless', [], None)
     if is_goal(current_node.puzzle):
-        return True  # todo przerobic zwracaną wartość
+        return current_node.solution, len(current_node.solution),\
+               processed, visited, round((time.time() - start_time) * 1000, 3)
     s = LifoQueue()
     t = set()
     s.put(current_node)
-    i = 0
     while not s.empty():
-        i = i + 1
-        print(i)
         v = s.get()
         change_zero_field_variable(v.puzzle)
         block_prohibited_moves(v)
         if v not in t:
+            processed += 1
             t.add(v)
             for n in list(reversed(v.sequence)):
                 v.move(n)
             for n in v.neighbours.values():
                 if is_goal(n.puzzle):
-                    return n.puzzle
-                s.put(n)
+                    return n.solution, len(n.solution),\
+                       processed, visited, round((time.time() - start_time) * 1000, 3)
+                if len(n.solution) < DEPTH:
+                    s.put(n)
+        visited += 1
     return False
 
 
 def main():
     start_time = time.time()
-    print(bfs(start_time))
+    print(dfs(start_time))
 
 
 if __name__ == "__main__":
