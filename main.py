@@ -1,5 +1,5 @@
 import time
-from queue import LifoQueue
+from queue import LifoQueue, PriorityQueue
 
 # todo program ma byc stosowany do roznych wymiarow tablic, do zmiany pozniej
 SOLVED_PUZZLE = [[1, 2, 3, 4],
@@ -165,6 +165,26 @@ def dfs(start_time):
                     s.put(n)
         visited += 1
     return False
+
+
+def astar(start_time, heuristic):
+    processed = 1
+    visited = 1
+    current_node = Node(START_PUZZLE, 'parentless', [], None)
+    if is_goal(current_node.puzzle):
+        return current_node.solution, len(current_node.solution), \
+               processed, visited, round((time.time() - start_time) * 1000, 3)
+    p = PriorityQueue()
+    t = set()
+    p.put((0, current_node)) # nie jestem pewny czy tak powinno to wygladac
+    while not p.empty():
+        v = p.get()
+        if is_goal(current_node.puzzle):
+            return v.solution, len(current_node.solution), \
+                   processed, visited, round((time.time() - start_time) * 1000, 3)
+        t.add(v)
+
+
 
 
 def main():
