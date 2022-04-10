@@ -44,18 +44,14 @@ class Arguments:
 
 class Board:
     def __validate_board(self):
-        if self.dimensions[0] * self.dimensions[1] != len(self.elements * len(self.elements[0])): # TODO Do poprawy!!!
-            raise ValueError(f"Liczba elementów w planszy ({len(self.elements)}) jest różna od wyliczonej na podstawie jej wymiarów ({self.dimensions})")
-
         correct_values = set(range(0, len(self.elements) * len(self.elements[0]))) # TODO do poprawy!!!
         for y in range(0, len(self.elements)): # Może da się to prościej napisać?
             for x in range(0, len(self.elements[y])):
                 if self.elements[y][x] not in correct_values:
                     raise ValueError("Plansza zawiera bledne wartości!")
 
-    def __init__(self, elements, dimensions): # TODO wywal dimensions
+    def __init__(self, elements):
         self.elements = elements
-        self.dimensions = dimensions
         self.__validate_board()
 
 
@@ -174,7 +170,7 @@ def bfs(start_time, board):
     current_node = Node(board.elements, 'parentless', [], None)
     if is_goal(current_node.puzzle):
         return current_node.solution, len(current_node.solution),\
-               processed, visited, round((time.time() - start_time) * 1000, 3)
+               processed, visited, round((time.process_time() - start_time) * 1000, 3)
     open_states = []
     closed_states = set()
     open_states.append(current_node)
@@ -189,7 +185,7 @@ def bfs(start_time, board):
             processed += 1
             if is_goal(n.puzzle):
                 return n.solution, len(n.solution),\
-                       processed, visited, round((time.time() - start_time) * 1000, 3)
+                       processed, visited, round((time.process_time() - start_time) * 1000, 3)
             if n not in closed_states:
                 open_states.append(n)
                 closed_states.add(n)
@@ -204,7 +200,7 @@ def dfs(start_time):
     current_node = Node(START_PUZZLE, 'parentless', [], None)
     if is_goal(current_node.puzzle):
         return current_node.solution, len(current_node.solution),\
-               processed, visited, round((time.time() - start_time) * 1000, 3)
+               processed, visited, round((time.process_time() - start_time) * 1000, 3)
     open_states = LifoQueue()
     closed_states = set()
     open_states.put(current_node)
@@ -219,7 +215,7 @@ def dfs(start_time):
             for n in v.neighbours.values():
                 if is_goal(n.puzzle):
                     return n.solution, len(n.solution),\
-                       processed, visited, round((time.time() - start_time) * 1000, 3)
+                       processed, visited, round((time.process_time() - start_time) * 1000, 3)
                 if len(n.solution) < DEPTH:
                     open_states.put(n)
         visited += 1
@@ -232,7 +228,7 @@ def astar(start_time, heuristic):
     current_node = Node(START_PUZZLE, 'parentless', [], None)
     if is_goal(current_node.puzzle):
         return current_node.solution, len(current_node.solution), \
-               processed, visited, round((time.time() - start_time) * 1000, 3)
+               processed, visited, round((time.process_time() - start_time) * 1000, 3)
     p = PriorityQueue()
     t = set()
     p.put((0, current_node)) # nie jestem pewny czy tak powinno to wygladac
@@ -240,7 +236,7 @@ def astar(start_time, heuristic):
         v = p.get()
         if is_goal(current_node.puzzle):
             return v.solution, len(current_node.solution), \
-                   processed, visited, round((time.time() - start_time) * 1000, 3)
+                   processed, visited, round((time.process_time() - start_time) * 1000, 3)
         t.add(v)
 
 
@@ -253,20 +249,25 @@ def main():
         if not file.readable():
             raise Exception("Nie można otworzyć pliku" + file.name)
 
-        input = []
-
-        for line in file:
-            line_nums = [int(i) for i in line.split() if i.isdigit()]
-            input.append(line_nums)
-
+        input = [int(i) for i in file.read().split() if i.isdigit()]
         if len(input) < 3:
             raise Exception("Plik wejściowy zawiera zbyt mało elementów: " + str(len(input)))
+        dimensions = (input[0], input[1])
 
-        dimensions = (input[0][0], input[0][1])
-        input.pop(0)
-        board = Board(input, dimensions)
+        del input[:2]
 
-    start_time = time.time()
+        # Na podstawie wymiarów tworzymy z input macierz o wymiarach podanych w pliku
+        matrix = []
+        for y in range(dimensions[1]):
+            row = []
+            for x in range(dimensions[0]):
+                row.append(input[0])
+                input.pop(0)
+            matrix.append(row)
+
+        board = Board(matrix)
+
+    start_time = time.process_time()
     print(bfs(start_time, board))
 
 
