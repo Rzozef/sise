@@ -44,15 +44,16 @@ class Arguments:
 
 class Board:
     def __validate_board(self):
-        if self.dimensions[0] * self.dimensions[1] != len(self.elements):
+        if self.dimensions[0] * self.dimensions[1] != len(self.elements * len(self.elements[0])): # TODO Do poprawy!!!
             raise ValueError(f"Liczba elementów w planszy ({len(self.elements)}) jest różna od wyliczonej na podstawie jej wymiarów ({self.dimensions})")
 
-        self.elements = sorted(self.elements)
-        for num in range(0, len(self.elements)):
-            if self.elements[num] != num:
-                raise ValueError("Plansza zawiera bledne wartości!")
+        correct_values = set(range(0, len(self.elements) * len(self.elements[0]))) # TODO do poprawy!!!
+        for y in range(0, len(self.elements)): # Może da się to prościej napisać?
+            for x in range(0, len(self.elements[y])):
+                if self.elements[y][x] not in correct_values:
+                    raise ValueError("Plansza zawiera bledne wartości!")
 
-    def __init__(self, elements, dimensions):
+    def __init__(self, elements, dimensions): # TODO wywal dimensions
         self.elements = elements
         self.dimensions = dimensions
         self.__validate_board()
@@ -167,10 +168,10 @@ def block_prohibited_moves(current_node):
 
 
 # todo czym jest maksymalna osiagnieta glebokosc rekursji? dodac do kodu
-def bfs(start_time):
+def bfs(start_time, board):
     visited = 1
     processed = 1
-    current_node = Node(START_PUZZLE, 'parentless', [], None)
+    current_node = Node(board.elements, 'parentless', [], None)
     if is_goal(current_node.puzzle):
         return current_node.solution, len(current_node.solution),\
                processed, visited, round((time.time() - start_time) * 1000, 3)
@@ -256,19 +257,17 @@ def main():
 
         for line in file:
             line_nums = [int(i) for i in line.split() if i.isdigit()]
-            for num in line_nums:
-                input.append(num)
+            input.append(line_nums)
 
         if len(input) < 3:
             raise Exception("Plik wejściowy zawiera zbyt mało elementów: " + str(len(input)))
 
-        dimensions = (input[0], input[1])
-        input.pop(0)
+        dimensions = (input[0][0], input[0][1])
         input.pop(0)
         board = Board(input, dimensions)
 
     start_time = time.time()
-    print(bfs(start_time))
+    print(bfs(start_time, board))
 
 
 if __name__ == "__main__":
