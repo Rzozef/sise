@@ -281,18 +281,25 @@ def main():
         #output = astar(start_time, board)
 
     # Pozostało zapisać wyniki
-    with open(args.save_file, "w") as file: # TODO dopisz przypadek kiedy układ nie znalazł rozwiązania
-        file.write(str(output[1]) + '\n')
-        file.write(''.join(output[0]))
+    with open(args.save_file, "w") as file:
+        if output == False:
+            file.write("-1")
+        else:
+            file.write(str(output[1]) + '\n')
+            file.write(''.join(output[0]))
 
     # I dodatkowe informacje
-    with open(args.additional_info_file, "w") as file: # TODO dopisz przypadek kiedy układ nie znalazł rozwiązania
-        file.write(str(output[1]) + '\n')
-        file.write(str(output[3]) + '\n')
-        file.write(str(output[2]) + '\n')
-        #file.write(str(output[5]) + '\n') # TODO maksymalna głębokość rekursji w kodzie!
-        file.write(str(round(output[4], 3)) + '\n')
+    with open(args.additional_info_file, "w") as file:
+        if output is False:
+            file.write("-1")
+        else:
+            file.write(str(output[1]) + '\n')
+            file.write(str(output[3]) + '\n')
+            file.write(str(output[2]) + '\n')
+            #file.write(str(output[5]) + '\n') # TODO maksymalna głębokość rekursji w kodzie!
+            file.write(str(round(output[4], 3)) + '\n')
 
+    # TODO stworzyć osobną klasę z output, w tej formie jak teraz nie wiadomo ktory argument do czego służy
 
 if __name__ == "__main__":
     main()
