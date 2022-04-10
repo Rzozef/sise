@@ -24,7 +24,7 @@ class Arguments:
     def __validate__(self):
         if self.strategy not in ("bfs", "dfs", "astr"):
             raise ValueError("Jako argument podano nieistniejaca strategie")
-        if self.acronym not in ("hamm", "manh") and not (Arguments.__is_permutation(self.acronym, "LRUD")):
+        if self.additional_param not in ("hamm", "manh") and not (Arguments.__is_permutation(self.additional_param, "LRUD")):
             raise ValueError("Podany akronim jest błędny")
         if not file_exists(self.source_file):
             raise ValueError("Podany plik zrodlowy nie istnieje")
@@ -35,7 +35,7 @@ class Arguments:
 
     def __init__(self, strategy, acronym, source_file, save_file, additional_info_file):
         self.strategy = strategy
-        self.acronym = acronym
+        self.additional_param = acronym
         self.source_file = source_file
         self.save_file = save_file
         self.additional_info_file = additional_info_file
@@ -73,7 +73,7 @@ def parse_arguments():
 
 
 class Node:
-    def __init__(self, current_puzzle, previous_puzzle, solution, step):
+    def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
         # aktualny stan planszy
         self.puzzle = current_puzzle
         # stany do ktorych mozna dojsc po wykonaniu kroku
@@ -85,18 +85,19 @@ class Node:
         if self.last_move is not None:
             self.solution.append(step)
         # kolejnosc kroków przy szukaniu rozwiązania
-        self.sequence = ['L', 'R', 'U', 'D']  # SEQUENCE.copy()
+        if sequence is not None:
+            self.sequence = sequence.copy()  # SEQUENCE.copy()
         # todo usunac komentarz na koniec, sequence ma byc argumentem wywolania
         self.zero = self.find_zero()
         if previous_puzzle != 'parentless':
             self.parent = previous_puzzle
 
     # metoda tworzy stan-dziecko i zapisuje je w dictionary neighbours
-    def create_neighbour(self, new_puzzle, step):
-        neighbour = Node(new_puzzle, self.puzzle, self.solution, step)
+    def create_neighbour(self, new_puzzle, step, *, sequence=None):
+        neighbour = Node(new_puzzle, self.puzzle, self.solution, step, sequence=sequence)
         self.neighbours[step] = neighbour
 
-    def move(self, step):
+    def move(self, step, *, sequence=None):
         x = self.zero["x"]
         y = self.zero["y"]
         if step == 'L':
@@ -104,25 +105,25 @@ class Node:
             for row in self.puzzle:
                 helper.append(row.copy())
             helper[y][x - 1], helper[y][x] = helper[y][x], helper[y][x - 1]
-            self.create_neighbour(helper, 'L')
+            self.create_neighbour(helper, 'L', sequence=sequence)
         elif step == 'R':
             helper = []
             for row in self.puzzle:
                 helper.append(row.copy())
             helper[y][x + 1], helper[y][x] = helper[y][x], helper[y][x + 1]
-            self.create_neighbour(helper, 'R')
+            self.create_neighbour(helper, 'R', sequence=sequence)
         elif step == 'U':
             helper = []
             for row in self.puzzle:
                 helper.append(row.copy())
             helper[y - 1][x], helper[y][x] = helper[y][x], helper[y - 1][x]
-            self.create_neighbour(helper, 'U')
+            self.create_neighbour(helper, 'U', sequence=sequence)
         elif step == 'D':
             helper = []
             for row in self.puzzle:
                 helper.append(row.copy())
             helper[y + 1][x], helper[y][x] = helper[y][x], helper[y + 1][x]
-            self.create_neighbour(helper, 'D')
+            self.create_neighbour(helper, 'D', sequence=sequence)
         self.zero = self.find_zero() # TODO można poprawić żeby liczył dla każdego ruchu osobno
 
     def find_zero(self):
@@ -134,7 +135,7 @@ class Node:
 
 
 # sprawdza czy osiagnelismy stan docelowy
-def is_goal(puzzle):
+def is_goal(puzzle): # TODO przepisz!!!!
     if puzzle == SOLVED_PUZZLE:
         return True
     return False
@@ -164,10 +165,10 @@ def block_prohibited_moves(current_node):
 
 
 # todo czym jest maksymalna osiagnieta glebokosc rekursji? dodac do kodu
-def bfs(start_time, board):
+def bfs(start_time, board, additional_param):
     visited = 1
     processed = 1
-    current_node = Node(board.elements, 'parentless', [], None)
+    current_node = Node(board.elements, 'parentless', [], None, sequence=additional_param)
     if is_goal(current_node.puzzle):
         return current_node.solution, len(current_node.solution),\
                processed, visited, round((time.process_time() - start_time) * 1000, 3)
@@ -180,7 +181,7 @@ def bfs(start_time, board):
         v = open_states.pop(0)
         block_prohibited_moves(v)
         for n in v.sequence:
-            v.move(n)
+            v.move(n, sequence=additional_param)
         for n in v.neighbours.values():
             processed += 1
             if is_goal(n.puzzle):
@@ -194,10 +195,10 @@ def bfs(start_time, board):
 
 
 # todo przemyslec gdzie wstawic processed i visited
-def dfs(start_time):
+def dfs(start_time, board, additional_param):
     visited = 1
     processed = 1
-    current_node = Node(START_PUZZLE, 'parentless', [], None)
+    current_node = Node(board, 'parentless', [], None, sequence=additional_param)
     if is_goal(current_node.puzzle):
         return current_node.solution, len(current_node.solution),\
                processed, visited, round((time.process_time() - start_time) * 1000, 3)
@@ -211,7 +212,7 @@ def dfs(start_time):
             processed += 1
             closed_states.add(v)
             for n in list(reversed(v.sequence)):
-                v.move(n)
+                v.move(n, sequence=additional_param)
             for n in v.neighbours.values():
                 if is_goal(n.puzzle):
                     return n.solution, len(n.solution),\
@@ -222,7 +223,7 @@ def dfs(start_time):
     return False
 
 
-def astar(start_time, heuristic):
+def astar(start_time, heuristic, additional_param):
     processed = 1
     visited = 1
     current_node = Node(START_PUZZLE, 'parentless', [], None)
@@ -267,8 +268,30 @@ def main():
 
         board = Board(matrix)
 
-    start_time = time.process_time()
-    print(bfs(start_time, board))
+    output = None
+    start_time = None
+    if args.strategy == "bfs":
+        start_time = time.process_time()
+        output = bfs(start_time, board, list(args.additional_param))
+    elif args.strategy == "dfs":
+        start_time = time.process_time()
+        output = dfs(start_time, board, list(args.additional_param))
+    elif args.strategy == "astr":
+        start_time = time.process_time()
+        #output = astar(start_time, board)
+
+    # Pozostało zapisać wyniki
+    with open(args.save_file, "w") as file: # TODO dopisz przypadek kiedy układ nie znalazł rozwiązania
+        file.write(str(output[1]) + '\n')
+        file.write(''.join(output[0]))
+
+    # I dodatkowe informacje
+    with open(args.additional_info_file, "w") as file: # TODO dopisz przypadek kiedy układ nie znalazł rozwiązania
+        file.write(str(output[1]) + '\n')
+        file.write(str(output[3]) + '\n')
+        file.write(str(output[2]) + '\n')
+        #file.write(str(output[5]) + '\n') # TODO maksymalna głębokość rekursji w kodzie!
+        file.write(str(round(output[4], 3)) + '\n')
 
 
 if __name__ == "__main__":
