@@ -1,4 +1,6 @@
 import time
+import argparse
+from os.path import exists as file_exists
 from queue import LifoQueue, PriorityQueue
 
 # todo program ma byc stosowany do roznych wymiarow tablic, do zmiany pozniej
@@ -13,6 +15,64 @@ START_PUZZLE = [[1, 3, 4, 8],
                 [13, 10, 14, 15]]
 # todo start_puzzle ma byc argumentem wywolania, narazie na sztywno do testow
 DEPTH = 25
+
+class Arguments:
+    @staticmethod
+    def __is_permutation(str1, str2):
+        return set(str1) == set(str2)
+
+    def __validate__(self):
+        if self.strategy not in ("bfs", "dfs", "astr"):
+            raise ValueError("Jako argument podano nieistniejaca strategie")
+        if self.acronym not in ("hamm", "manh") and not (Arguments.__is_permutation(self.acronym, "LRUD")):
+            raise ValueError("Podany akronim jest błędny")
+        if not file_exists(self.source_file):
+            raise ValueError("Podany plik zrodlowy nie istnieje")
+        if not file_exists(self.save_file):
+            raise ValueError("Plik do ktorego maja zostac zapisane wyniki nie istnieje")
+        if not file_exists(self.additional_info_file):
+            raise ValueError("Plik do którego mają zostać zapisanme dodatkowe informacje nie istnieje")
+
+    def __init__(self, strategy, acronym, source_file, save_file, additional_info_file):
+        self.strategy = strategy
+        self.acronym = acronym
+        self.source_file = source_file
+        self.save_file = save_file
+        self.additional_info_file = additional_info_file
+        self.__validate__()
+
+
+class Board:
+    def __validate_board(self):
+        if self.dimensions[0] * self.dimensions[1] != len(self.elements):
+            raise ValueError(f"Liczba elementów w planszy ({len(self.elements)}) jest różna od wyliczonej na podstawie jej wymiarów ({self.dimensions})")
+
+        self.elements = sorted(self.elements)
+        for num in range(0, len(self.elements)):
+            if self.elements[num] != num:
+                raise ValueError("Plansza zawiera bledne wartości!")
+
+    def __init__(self, elements, dimensions):
+        self.elements = elements
+        self.dimensions = dimensions
+        self.__validate_board()
+
+
+def parse_arguments():
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("strategy", nargs=1)
+    arg_parser.add_argument("acronym", nargs=1)
+    arg_parser.add_argument("source_file", nargs=1)
+    arg_parser.add_argument("save_file", nargs=1)
+    arg_parser.add_argument("additional_info_file", nargs=1)
+    arguments = arg_parser.parse_args()
+    return Arguments(
+        arguments.strategy[0],
+        arguments.acronym[0],
+        arguments.source_file[0],
+        arguments.save_file[0],
+        arguments.additional_info_file[0]
+    )
 
 
 class Node:
@@ -186,6 +246,27 @@ def astar(start_time, heuristic):
 
 
 def main():
+    args = parse_arguments()
+    board = None
+    with open(args.source_file, "r") as file:
+        if not file.readable():
+            raise Exception("Nie można otworzyć pliku" + file.name)
+
+        input = []
+
+        for line in file:
+            line_nums = [int(i) for i in line.split() if i.isdigit()]
+            for num in line_nums:
+                input.append(num)
+
+        if len(input) < 3:
+            raise Exception("Plik wejściowy zawiera zbyt mało elementów: " + str(len(input)))
+
+        dimensions = (input[0], input[1])
+        input.pop(0)
+        input.pop(0)
+        board = Board(input, dimensions)
+
     start_time = time.time()
     print(bfs(start_time))
 
