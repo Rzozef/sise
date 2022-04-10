@@ -12,7 +12,6 @@ START_PUZZLE = [[1, 3, 4, 8],
                 [9, 6, 11, 12],
                 [13, 10, 14, 15]]
 # todo start_puzzle ma byc argumentem wywolania, narazie na sztywno do testow
-ZERO_FIELD = {}
 DEPTH = 25
 
 
@@ -31,6 +30,7 @@ class Node:
         # kolejnosc kroków przy szukaniu rozwiązania
         self.sequence = ['L', 'R', 'U', 'D']  # SEQUENCE.copy()
         # todo usunac komentarz na koniec, sequence ma byc argumentem wywolania
+        self.zero = self.find_zero()
         if previous_puzzle != 'parentless':
             self.parent = previous_puzzle
 
@@ -40,8 +40,8 @@ class Node:
         self.neighbours[step] = neighbour
 
     def move(self, step):
-        x = ZERO_FIELD['column']
-        y = ZERO_FIELD['row']
+        x = self.zero["x"]
+        y = self.zero["y"]
         if step == 'L':
             helper = []
             for row in self.puzzle:
@@ -66,6 +66,14 @@ class Node:
                 helper.append(row.copy())
             helper[y + 1][x], helper[y][x] = helper[y][x], helper[y + 1][x]
             self.create_neighbour(helper, 'D')
+        self.zero = self.find_zero() # TODO można poprawić żeby liczył dla każdego ruchu osobno
+
+    def find_zero(self):
+        for y in range(len(self.puzzle)):
+            for x in range(len(self.puzzle[y])):
+                if self.puzzle[y][x] == 0:
+                    return {"x": x, "y": y}
+        raise Exception("Nie znaleziono zera w ukladance!")
 
 
 # sprawdza czy osiagnelismy stan docelowy
@@ -73,14 +81,6 @@ def is_goal(puzzle):
     if puzzle == SOLVED_PUZZLE:
         return True
     return False
-
-
-def change_zero_field_variable(puzzle):
-    for i in range(len(puzzle)):
-        for j in range(len(puzzle[i])):
-            if puzzle[i][j] == 0:
-                ZERO_FIELD['row'] = i
-                ZERO_FIELD['column'] = j
 
 
 def block_prohibited_moves(current_node):
@@ -96,13 +96,13 @@ def block_prohibited_moves(current_node):
         elif current_node.last_move == 'D':
             current_node.sequence.remove('U')
     # sprawdzamy krańce macierzy stanu i blokujemy wyjście poza granice
-    if ZERO_FIELD['row'] == 0:
+    if current_node.zero["y"] == 0:
         current_node.sequence.remove('U')
-    elif ZERO_FIELD['row'] == len(current_node.puzzle) - 1:
+    elif current_node.zero["y"] == len(current_node.puzzle) - 1:
         current_node.sequence.remove('D')
-    if ZERO_FIELD['column'] == 0:
+    if current_node.zero["x"] == 0:
         current_node.sequence.remove('L')
-    elif ZERO_FIELD['column'] == len(current_node.puzzle) - 1:
+    elif current_node.zero["x"] == len(current_node.puzzle) - 1:
         current_node.sequence.remove('R')
 
 
@@ -114,14 +114,13 @@ def bfs(start_time):
     if is_goal(current_node.puzzle):
         return current_node.solution, len(current_node.solution),\
                processed, visited, round((time.time() - start_time) * 1000, 3)
-    queue = []
-    u = set()
-    queue.append(current_node)
-    u.add(current_node)
-    # pętla zatrzyma sie gdy queue będzie puste
-    while queue:
-        v = queue.pop(0)
-        change_zero_field_variable(v.puzzle)
+    open_states = []
+    closed_states = set()
+    open_states.append(current_node)
+    closed_states.add(current_node)
+    # pętla zatrzyma sie gdy wszystkie stany otwarte zostaną przetworzone
+    while open_states:
+        v = open_states.pop(0)
         block_prohibited_moves(v)
         for n in v.sequence:
             v.move(n)
@@ -130,9 +129,9 @@ def bfs(start_time):
             if is_goal(n.puzzle):
                 return n.solution, len(n.solution),\
                        processed, visited, round((time.time() - start_time) * 1000, 3)
-            if n not in u:
-                queue.append(n)
-                u.add(n)
+            if n not in closed_states:
+                open_states.append(n)
+                closed_states.add(n)
         visited += 1
     return False
 
@@ -145,16 +144,15 @@ def dfs(start_time):
     if is_goal(current_node.puzzle):
         return current_node.solution, len(current_node.solution),\
                processed, visited, round((time.time() - start_time) * 1000, 3)
-    s = LifoQueue()
-    t = set()
-    s.put(current_node)
-    while not s.empty():
-        v = s.get()
-        change_zero_field_variable(v.puzzle)
+    open_states = LifoQueue()
+    closed_states = set()
+    open_states.put(current_node)
+    while not open_states.empty():
+        v = open_states.get()
         block_prohibited_moves(v)
-        if v not in t:
+        if v not in closed_states:
             processed += 1
-            t.add(v)
+            closed_states.add(v)
             for n in list(reversed(v.sequence)):
                 v.move(n)
             for n in v.neighbours.values():
@@ -162,7 +160,7 @@ def dfs(start_time):
                     return n.solution, len(n.solution),\
                        processed, visited, round((time.time() - start_time) * 1000, 3)
                 if len(n.solution) < DEPTH:
-                    s.put(n)
+                    open_states.put(n)
         visited += 1
     return False
 
@@ -189,7 +187,7 @@ def astar(start_time, heuristic):
 
 def main():
     start_time = time.time()
-    print(dfs(start_time))
+    print(bfs(start_time))
 
 
 if __name__ == "__main__":
