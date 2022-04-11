@@ -9,7 +9,7 @@ SOLVED_PUZZLE = [[1, 2, 3, 4],
                  [9, 10, 11, 12],
                  [13, 14, 15, 0]]
 # todo start_puzzle ma byc argumentem wywolania, narazie na sztywno do testow
-DEPTH = 25
+MAX_DEPTH = 25
 
 class Arguments:
     @staticmethod
@@ -68,7 +68,7 @@ def parse_arguments():
 
 
 class Node:
-    def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
+    def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None, depth=1):
         # aktualny stan planszy
         self.puzzle = current_puzzle.copy()
 
@@ -86,6 +86,7 @@ class Node:
         self.zero = self.find_zero()
         if previous_puzzle != 'parentless':
             self.parent = previous_puzzle
+        self.depth = depth
 
     def get_neighbours(self): # TODO dodaj obsługę astar (heurystyk)
         """Zwraca sąsiadów w kolejności sequence"""
@@ -111,7 +112,7 @@ class Node:
                     neighbour[y + 1][x], neighbour[y][x] = neighbour[y][x], neighbour[y + 1][x]
                 # def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
                 #self.zero = self.find_zero()
-                neighbours[index] = Node(neighbour, self.puzzle, self.solution, c, sequence=original_sequence)
+                neighbours[index] = Node(neighbour, self.puzzle, self.solution, c, sequence=original_sequence, depth=self.depth+1)
                 index += 1
 
         self.zero = self.find_zero() # TODO można poprawić żeby liczył dla każdego ruchu osobno
@@ -158,9 +159,6 @@ def bfs(start_time, board, additional_param):
     visited = 1
     processed = 1
     current_node = Node(board.elements, 'parentless', [], None, sequence=additional_param)
-    if is_goal(current_node.puzzle):
-        return current_node.solution, len(current_node.solution),\
-               processed, visited, round((time.process_time() - start_time) * 1000, 3)
     open_states = []
     closed_states = set()
     open_states.append(current_node)
@@ -170,12 +168,12 @@ def bfs(start_time, board, additional_param):
         if is_goal(v.puzzle):
             return v.solution, len(v.solution), \
                 processed, visited, round((time.process_time() - start_time) * 1000, 3)
-        if v not in closed_states:
+        if v not in closed_states and v.depth <= MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
             closed_states.add(v)
-        neighbours = v.get_neighbours()
-        for n in neighbours:
-            if n not in closed_states:
-                open_states.append(n)
+            neighbours = v.get_neighbours()
+            for n in neighbours:
+                if n not in closed_states:
+                    open_states.append(n)
         visited += 1
     return False
 
@@ -184,26 +182,20 @@ def bfs(start_time, board, additional_param):
 def dfs(start_time, board, additional_param):
     visited = 1
     processed = 1
-    current_node = Node(board, 'parentless', [], None, sequence=additional_param)
-    if is_goal(current_node.puzzle):
-        return current_node.solution, len(current_node.solution),\
-               processed, visited, round((time.process_time() - start_time) * 1000, 3)
+    current_node = Node(board.elements, 'parentless', [], None, sequence=additional_param)
     open_states = LifoQueue()
     closed_states = set()
     open_states.put(current_node)
     while not open_states.empty():
         v = open_states.get()
-        if v not in closed_states:
+        if is_goal(v.puzzle):
+            return v.solution, len(v.solution), \
+                processed, visited, round((time.process_time() - start_time) * 1000, 3)
+        if v not in closed_states and v.depth <= MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
             processed += 1
             closed_states.add(v)
-            for n in list(reversed(v.sequence)):
-                v.move(n, sequence=additional_param)
-            for n in v.neighbours.values():
-                if is_goal(n.puzzle):
-                    return n.solution, len(n.solution),\
-                       processed, visited, round((time.process_time() - start_time) * 1000, 3)
-                if len(n.solution) < DEPTH:
-                    open_states.put(n)
+            for n in list(reversed(v.get_neighbours())):
+                open_states.put(n) # TODO Optymalizacja, sprawdź czy sąsiedzi nie są rozwiązaniem?
         visited += 1
     return False
 
