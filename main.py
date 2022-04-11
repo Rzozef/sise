@@ -8,11 +8,6 @@ SOLVED_PUZZLE = [[1, 2, 3, 4],
                  [5, 6, 7, 8],
                  [9, 10, 11, 12],
                  [13, 14, 15, 0]]
-SEQUENCE = []
-START_PUZZLE = [[1, 3, 4, 8],
-                [5, 2, 7, 0],
-                [9, 6, 11, 12],
-                [13, 10, 14, 15]]
 # todo start_puzzle ma byc argumentem wywolania, narazie na sztywno do testow
 DEPTH = 25
 
@@ -75,9 +70,9 @@ def parse_arguments():
 class Node:
     def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
         # aktualny stan planszy
-        self.puzzle = current_puzzle
+        self.puzzle = current_puzzle.copy()
+
         # stany do ktorych mozna dojsc po wykonaniu kroku
-        self.neighbours = {}
         # operator wykonany na rodzicu
         self.last_move = step
         # aktualny ciąg operatorów (rozwiązanie)
@@ -92,39 +87,57 @@ class Node:
         if previous_puzzle != 'parentless':
             self.parent = previous_puzzle
 
-    # metoda tworzy stan-dziecko i zapisuje je w dictionary neighbours
-    def create_neighbour(self, new_puzzle, step, *, sequence=None):
-        neighbour = Node(new_puzzle, self.puzzle, self.solution, step, sequence=sequence)
-        self.neighbours[step] = neighbour
-
-    def move(self, step, *, sequence=None):
+    def get_neighbours(self): # TODO dodaj obsługę astar (heurystyk)
+        """Zwraca sąsiadów w kolejności sequence"""
         x = self.zero["x"]
         y = self.zero["y"]
-        if step == 'L':
-            helper = []
-            for row in self.puzzle:
-                helper.append(row.copy())
-            helper[y][x - 1], helper[y][x] = helper[y][x], helper[y][x - 1]
-            self.create_neighbour(helper, 'L', sequence=sequence)
-        elif step == 'R':
-            helper = []
-            for row in self.puzzle:
-                helper.append(row.copy())
-            helper[y][x + 1], helper[y][x] = helper[y][x], helper[y][x + 1]
-            self.create_neighbour(helper, 'R', sequence=sequence)
-        elif step == 'U':
-            helper = []
-            for row in self.puzzle:
-                helper.append(row.copy())
-            helper[y - 1][x], helper[y][x] = helper[y][x], helper[y - 1][x]
-            self.create_neighbour(helper, 'U', sequence=sequence)
-        elif step == 'D':
-            helper = []
-            for row in self.puzzle:
-                helper.append(row.copy())
-            helper[y + 1][x], helper[y][x] = helper[y][x], helper[y + 1][x]
-            self.create_neighbour(helper, 'D', sequence=sequence)
+        neighbours = []
+        original_sequence = self.sequence.copy()
+        self.block_prohibited_moves()
+        for i in range(len(self.sequence)):
+            neighbours.append([row[:] for row in self.puzzle])
+
+        if self.sequence is not None:
+            index = 0
+            for c in self.sequence:
+                neighbour = neighbours[index]
+                if c == "L":
+                    neighbour[y][x - 1], neighbour[y][x] = neighbour[y][x], neighbour[y][x - 1]
+                elif c == "R":
+                    neighbour[y][x + 1], neighbour[y][x] = neighbour[y][x], neighbour[y][x + 1]
+                elif c == "U":
+                    neighbour[y - 1][x], neighbour[y][x] = neighbour[y][x], neighbour[y - 1][x]
+                elif c == "D":
+                    neighbour[y + 1][x], neighbour[y][x] = neighbour[y][x], neighbour[y + 1][x]
+                # def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
+                #self.zero = self.find_zero()
+                neighbours[index] = Node(neighbour, self.puzzle, self.solution, c, sequence=original_sequence)
+                index += 1
+
         self.zero = self.find_zero() # TODO można poprawić żeby liczył dla każdego ruchu osobno
+        return neighbours
+
+    def block_prohibited_moves(self):
+        # Likwidujemy możliwość cofnięcia ruchu, która sztucznie by wydłużała szukanie rozwiązania
+        # W pierwszej iteracji nie ma czego cofać
+        if self.last_move is not None:
+            if self.last_move == 'L':
+                self.sequence.remove('R')
+            elif self.last_move == 'R':
+                self.sequence.remove('L')
+            elif self.last_move == 'U':
+                self.sequence.remove('D')
+            elif self.last_move == 'D':
+                self.sequence.remove('U')
+        # sprawdzamy krańce macierzy stanu i blokujemy wyjście poza granice
+        if self.zero["y"] == 0:
+            self.sequence.remove('U')
+        elif self.zero["y"] == len(self.puzzle) - 1:
+            self.sequence.remove('D')
+        if self.zero["x"] == 0:
+            self.sequence.remove('L')
+        elif self.zero["x"] == len(self.puzzle) - 1:
+            self.sequence.remove('R')
 
     def find_zero(self):
         for y in range(len(self.puzzle)):
@@ -139,30 +152,6 @@ def is_goal(puzzle): # TODO przepisz!!!!
     if puzzle == SOLVED_PUZZLE:
         return True
     return False
-
-
-def block_prohibited_moves(current_node):
-    # Likwidujemy możliwość cofnięcia ruchu, która sztucznie by wydłużała szukanie rozwiązania
-    # W pierwszej iteracji nie ma czego cofać
-    if current_node.last_move is not None:
-        if current_node.last_move == 'L':
-            current_node.sequence.remove('R')
-        elif current_node.last_move == 'R':
-            current_node.sequence.remove('L')
-        elif current_node.last_move == 'U':
-            current_node.sequence.remove('D')
-        elif current_node.last_move == 'D':
-            current_node.sequence.remove('U')
-    # sprawdzamy krańce macierzy stanu i blokujemy wyjście poza granice
-    if current_node.zero["y"] == 0:
-        current_node.sequence.remove('U')
-    elif current_node.zero["y"] == len(current_node.puzzle) - 1:
-        current_node.sequence.remove('D')
-    if current_node.zero["x"] == 0:
-        current_node.sequence.remove('L')
-    elif current_node.zero["x"] == len(current_node.puzzle) - 1:
-        current_node.sequence.remove('R')
-
 
 # todo czym jest maksymalna osiagnieta glebokosc rekursji? dodac do kodu
 def bfs(start_time, board, additional_param):
@@ -179,17 +168,15 @@ def bfs(start_time, board, additional_param):
     # pętla zatrzyma sie gdy wszystkie stany otwarte zostaną przetworzone
     while open_states:
         v = open_states.pop(0)
-        block_prohibited_moves(v)
-        for n in v.sequence:
-            v.move(n, sequence=additional_param)
-        for n in v.neighbours.values():
-            processed += 1
-            if is_goal(n.puzzle):
-                return n.solution, len(n.solution),\
-                       processed, visited, round((time.process_time() - start_time) * 1000, 3)
+        if is_goal(v.puzzle):
+            return v.solution, len(v.solution), \
+                processed, visited, round((time.process_time() - start_time) * 1000, 3)
+        if v not in closed_states:
+            closed_states.add(v)
+        neighbours = v.get_neighbours()
+        for n in neighbours:
             if n not in closed_states:
                 open_states.append(n)
-                closed_states.add(n)
         visited += 1
     return False
 
@@ -207,7 +194,6 @@ def dfs(start_time, board, additional_param):
     open_states.put(current_node)
     while not open_states.empty():
         v = open_states.get()
-        block_prohibited_moves(v)
         if v not in closed_states:
             processed += 1
             closed_states.add(v)
@@ -223,10 +209,10 @@ def dfs(start_time, board, additional_param):
     return False
 
 
-def astar(start_time, heuristic, additional_param):
+def astar(start_time, board, heuristic, additional_param):
     processed = 1
     visited = 1
-    current_node = Node(START_PUZZLE, 'parentless', [], None)
+    current_node = Node(board, 'parentless', [], None)
     if is_goal(current_node.puzzle):
         return current_node.solution, len(current_node.solution), \
                processed, visited, round((time.process_time() - start_time) * 1000, 3)
@@ -297,7 +283,7 @@ def main():
             file.write(str(output[3]) + '\n')
             file.write(str(output[2]) + '\n')
             #file.write(str(output[5]) + '\n') # TODO maksymalna głębokość rekursji w kodzie!
-            file.write(str(round(output[4], 3)) + '\n')
+            file.write(str(output[4]) + '\n')
 
     # TODO stworzyć osobną klasę z output, w tej formie jak teraz nie wiadomo ktory argument do czego służy
 
