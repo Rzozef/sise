@@ -164,7 +164,6 @@ def bfs(start_time, board, additional_param):
     open_states = []
     closed_states = set()
     open_states.append(current_node)
-    closed_states.add(current_node)
     # pętla zatrzyma sie gdy wszystkie stany otwarte zostaną przetworzone
     while open_states:
         v = open_states.pop(0)
