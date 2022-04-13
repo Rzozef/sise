@@ -154,21 +154,22 @@ def is_goal(puzzle): # TODO przepisz!!!!
         return True
     return False
 
-# todo czym jest maksymalna osiagnieta glebokosc rekursji? dodac do kodu
 def bfs(start_time, board, additional_param):
     visited = 1
     processed = 1
     current_node = Node(board.elements, 'parentless', [], None, sequence=additional_param)
     open_states = []
     closed_states = set()
+    max_depth = 1
     open_states.append(current_node)
     # pętla zatrzyma sie gdy wszystkie stany otwarte zostaną przetworzone
     while open_states:
         v = open_states.pop(0)
+        max_depth = max(max_depth, v.depth)
         if is_goal(v.puzzle):
             return v.solution, len(v.solution), \
-                processed, visited, round((time.process_time() - start_time) * 1000, 3)
-        if v not in closed_states and v.depth <= MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
+                processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
+        if v not in closed_states and v.depth < MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
             closed_states.add(v)
             neighbours = v.get_neighbours()
             for n in neighbours:
@@ -186,12 +187,14 @@ def dfs(start_time, board, additional_param):
     open_states = LifoQueue()
     closed_states = set()
     open_states.put(current_node)
+    max_depth = 1
     while not open_states.empty():
         v = open_states.get()
+        max_depth = max(max_depth, v.depth)
         if is_goal(v.puzzle):
             return v.solution, len(v.solution), \
-                processed, visited, round((time.process_time() - start_time) * 1000, 3)
-        if v not in closed_states and v.depth <= MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
+                processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
+        if v not in closed_states and v.depth < MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
             processed += 1
             closed_states.add(v)
             for n in list(reversed(v.get_neighbours())):
@@ -273,7 +276,7 @@ def main():
             file.write(str(output[1]) + '\n')
             file.write(str(output[3]) + '\n')
             file.write(str(output[2]) + '\n')
-            #file.write(str(output[5]) + '\n') # TODO maksymalna głębokość rekursji w kodzie!
+            file.write(str(output[5]) + '\n')
             file.write(str(output[4]) + '\n')
 
     # TODO stworzyć osobną klasę z output, w tej formie jak teraz nie wiadomo ktory argument do czego służy
