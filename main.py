@@ -156,7 +156,7 @@ def is_goal(puzzle): # TODO przepisz!!!!
 
 def bfs(start_time, board, additional_param):
     visited = 1
-    processed = 1
+    processed = 0
     current_node = Node(board.elements, 'parentless', [], None, sequence=additional_param)
     open_states = []
     closed_states = set()
@@ -165,6 +165,7 @@ def bfs(start_time, board, additional_param):
     # pętla zatrzyma sie gdy wszystkie stany otwarte zostaną przetworzone
     while open_states:
         v = open_states.pop(0)
+        processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.puzzle):
             return v.solution, len(v.solution), \
@@ -175,14 +176,14 @@ def bfs(start_time, board, additional_param):
             for n in neighbours:
                 if n not in closed_states:
                     open_states.append(n)
-        visited += 1
+                    visited += 1
     return False
 
 
 # todo przemyslec gdzie wstawic processed i visited
 def dfs(start_time, board, additional_param):
     visited = 1
-    processed = 1
+    processed = 0
     current_node = Node(board.elements, 'parentless', [], None, sequence=additional_param)
     open_states = LifoQueue()
     closed_states = set()
@@ -190,16 +191,16 @@ def dfs(start_time, board, additional_param):
     max_depth = 1
     while not open_states.empty():
         v = open_states.get()
+        processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.puzzle):
             return v.solution, len(v.solution), \
                 processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
         if v not in closed_states and v.depth < MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
-            processed += 1
             closed_states.add(v)
             for n in list(reversed(v.get_neighbours())):
-                open_states.put(n) # TODO Optymalizacja, sprawdź czy sąsiedzi nie są rozwiązaniem?
-        visited += 1
+                open_states.put(n)
+                visited += 1
     return False
 
 
