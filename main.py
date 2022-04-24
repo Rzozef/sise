@@ -34,7 +34,9 @@ class Arguments:
 
 
 class Board:
-    def __validate_board(self):
+    target_boards = {} # dimension: Board
+
+    def validate(self):
         correct_values = set(range(0, len(self.elements) * len(self.elements[0]))) # TODO do poprawy!!!
         for y in range(0, len(self.elements)): # Może da się to prościej napisać?
             for x in range(0, len(self.elements[y])):
@@ -43,7 +45,6 @@ class Board:
 
     def __init__(self, elements):
         self.elements = elements
-        self.__validate_board()
 
     def __len__(self):
         return len(self.elements)
@@ -58,9 +59,11 @@ class Board:
         return len(self.elements)
 
     @staticmethod
-    def get_solution_board(dimension):
+    def get_target_board(dimension):
         if dimension <= 1:
             raise Exception(f"Nie mozna stworzyc rozwiazanej planszy dla wymiarow {dimension}x{dimension}")
+        if dimension in Board.target_boards:
+            return Board.target_boards[dimension]
         elements = []
         for y in range(0, dimension):
             row = []
@@ -68,7 +71,8 @@ class Board:
                 row.append(y * dimension + x + 1)
             elements.append(row)
         elements[dimension-1][dimension-1] = 0
-        return Board(elements)
+        Board.target_boards[dimension] = Board(elements)
+        return Board.target_boards[dimension]
 
 
 def parse_arguments():
@@ -179,7 +183,7 @@ class Node:
 
 # sprawdza czy osiagnelismy stan docelowy
 def is_goal(board): # TODO przepisz!!!!
-    if board == Board.get_solution_board(board.get_dimension()): #TODO nie powinno to być generowane przy kazdym sprawdzeniu...
+    if board == Board.get_target_board(board.get_dimension()): #TODO nie powinno to być generowane przy kazdym sprawdzeniu...
         return True
     return False
 
@@ -277,6 +281,7 @@ def main():
             matrix.append(row)
 
         board = Board(matrix)
+        board.validate()
 
     output = None
     start_time = None
