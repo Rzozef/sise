@@ -5,6 +5,7 @@ from queue import LifoQueue, PriorityQueue
 
 MAX_DEPTH = 25
 
+
 class Arguments:
     @staticmethod
     def __is_permutation(str1, str2):
@@ -13,7 +14,8 @@ class Arguments:
     def __validate__(self):
         if self.strategy not in ("bfs", "dfs", "astr"):
             raise ValueError("Jako argument podano nieistniejaca strategie")
-        if self.additional_param not in ("hamm", "manh") and not (Arguments.__is_permutation(self.additional_param, "LRUD")):
+        if self.additional_param not in ("hamm", "manh") and not (
+                Arguments.__is_permutation(self.additional_param, "LRUD")):
             raise ValueError("Podany akronim jest błędny")
         if not file_exists(self.source_file):
             raise ValueError("Podany plik zrodlowy nie istnieje")
@@ -32,11 +34,11 @@ class Arguments:
 
 
 class Board:
-    target_boards = {} # dimension: Board
+    target_boards = {}  # dimension: Board
 
     def validate(self):
-        correct_values = set(range(0, len(self.elements) * len(self.elements[0]))) # TODO do poprawy!!!
-        for y in range(0, len(self.elements)): # Może da się to prościej napisać?
+        correct_values = set(range(0, len(self.elements) * len(self.elements[0])))  # TODO do poprawy!!!
+        for y in range(0, len(self.elements)):  # Może da się to prościej napisać?
             for x in range(0, len(self.elements[y])):
                 if self.elements[y][x] not in correct_values:
                     raise ValueError("Plansza zawiera bledne wartości!")
@@ -68,7 +70,7 @@ class Board:
             for x in range(0, dimension):
                 row.append(y * dimension + x + 1)
             elements.append(row)
-        elements[dimension-1][dimension-1] = 0
+        elements[dimension - 1][dimension - 1] = 0
         Board.target_boards[dimension] = Board(elements)
         return Board.target_boards[dimension]
 
@@ -107,7 +109,7 @@ class Node:
         self.parent = previous_node
         self.depth = depth
 
-    def get_neighbours(self): # TODO dodaj obsługę astar (heurystyk)
+    def get_neighbours(self):  # TODO dodaj obsługę astar (heurystyk)
         """Zwraca sąsiadów w kolejności sequence"""
         x = self.zero["x"]
         y = self.zero["y"]
@@ -130,11 +132,11 @@ class Node:
                 elif c == "D":
                     neighbour[y + 1][x], neighbour[y][x] = neighbour[y][x], neighbour[y + 1][x]
                 # def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
-                #self.zero = self.find_zero()
-                neighbours[index] = Node(Board(neighbour), self, c, sequence=original_sequence, depth=self.depth+1)
+                # self.zero = self.find_zero()
+                neighbours[index] = Node(Board(neighbour), self, c, sequence=original_sequence, depth=self.depth + 1)
                 index += 1
 
-        self.zero = self.find_zero() # TODO można poprawić żeby liczył dla każdego ruchu osobno
+        self.zero = self.find_zero()  # TODO można poprawić żeby liczył dla każdego ruchu osobno
         return neighbours
 
     def block_prohibited_moves(self):
@@ -180,10 +182,12 @@ class Node:
 
 
 # sprawdza czy osiagnelismy stan docelowy
-def is_goal(board): # TODO przepisz!!!!
-    if board == Board.get_target_board(board.get_dimension()): #TODO nie powinno to być generowane przy kazdym sprawdzeniu...
+def is_goal(board):  # TODO przepisz!!!!
+    if board == Board.get_target_board(
+            board.get_dimension()):  # TODO nie powinno to być generowane przy kazdym sprawdzeniu...
         return True
     return False
+
 
 def bfs(start_time, board, additional_param):
     visited = 1
@@ -200,8 +204,8 @@ def bfs(start_time, board, additional_param):
         max_depth = max(max_depth, v.depth)
         if is_goal(v.board):
             return v.get_solution(), len(v.get_solution()), \
-                processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
-        if v not in closed_states and v.depth < MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
+                   processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
+        if v not in closed_states and v.depth < MAX_DEPTH:  # TODO <= MAX_DEPTH na pewno w tym miejscu?
             closed_states.add(v)
             neighbours = v.get_neighbours()
             for n in neighbours:
@@ -226,8 +230,8 @@ def dfs(start_time, board, additional_param):
         max_depth = max(max_depth, v.depth)
         if is_goal(v.board):
             return v.get_solution(), len(v.get_solution()), \
-                processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
-        if v not in closed_states and v.depth < MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
+                   processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
+        if v not in closed_states and v.depth < MAX_DEPTH:  # TODO <= MAX_DEPTH na pewno w tym miejscu?
             closed_states.add(v)
             for n in list(reversed(v.get_neighbours())):
                 open_states.put(n)
@@ -238,21 +242,19 @@ def dfs(start_time, board, additional_param):
 def astar(start_time, board, heuristic, additional_param):
     processed = 1
     visited = 1
-    current_node = Node(board, None, [], None)
+    current_node = Node(board, None, [])
     if is_goal(current_node.board):
         return current_node.get_solution(), len(current_node.get_solution()), \
                processed, visited, round((time.process_time() - start_time) * 1000, 3)
     p = PriorityQueue()
     t = set()
-    p.put((0, current_node)) # nie jestem pewny czy tak powinno to wygladac
+    p.put((0, current_node))  # nie jestem pewny czy tak powinno to wygladac
     while not p.empty():
         v = p.get()
         if is_goal(current_node.board):
             return v.get_solution(), len(current_node.get_solution()), \
                    processed, visited, round((time.process_time() - start_time) * 1000, 3)
         t.add(v)
-
-
 
 
 def main():
@@ -262,20 +264,20 @@ def main():
         if not file.readable():
             raise Exception("Nie można otworzyć pliku" + file.name)
 
-        input = [int(i) for i in file.read().split() if i.isdigit()]
-        if len(input) < 3:
-            raise Exception("Plik wejściowy zawiera zbyt mało elementów: " + str(len(input)))
-        dimensions = (input[0], input[1])
+        input_nums = [int(i) for i in file.read().split() if i.isdigit()]
+        if len(input_nums) < 3:
+            raise Exception("Plik wejściowy zawiera zbyt mało elementów: " + str(len(input_nums)))
+        dimensions = (input_nums[0], input_nums[1])
 
-        del input[:2]
+        del input_nums[:2]
 
         # Na podstawie wymiarów tworzymy z input macierz o wymiarach podanych w pliku
         matrix = []
         for y in range(dimensions[1]):
             row = []
             for x in range(dimensions[0]):
-                row.append(input[0])
-                input.pop(0)
+                row.append(input_nums[0])
+                input_nums.pop(0)
             matrix.append(row)
 
         board = Board(matrix)
@@ -291,11 +293,11 @@ def main():
         output = dfs(start_time, board, list(args.additional_param))
     elif args.strategy == "astr":
         start_time = time.process_time()
-        #output = astar(start_time, board)
+        # output = astar(start_time, board)
 
     # Pozostało zapisać wyniki
     with open(args.save_file, "w") as file:
-        if output == False:
+        if not output:
             file.write("-1")
         else:
             file.write(str(output[1]) + '\n')
@@ -313,6 +315,7 @@ def main():
             file.write(str(output[4]) + '\n')
 
     # TODO stworzyć osobną klasę z output, w tej formie jak teraz nie wiadomo ktory argument do czego służy
+
 
 if __name__ == "__main__":
     main()
