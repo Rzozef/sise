@@ -59,7 +59,7 @@ class State:
         return len(self.elements)
 
     @staticmethod
-    def get_target_board(dimension):
+    def get_target_state(dimension):
         if dimension <= 1:
             raise Exception(f"Nie mozna stworzyc rozwiazanej planszy dla wymiarow {dimension}x{dimension}")
         if dimension in State.target_boards:
@@ -103,6 +103,8 @@ class Node:
         # kolejnosc kroków przy szukaniu rozwiązania
         if sequence is not None:
             self.sequence = sequence.copy()  # SEQUENCE.copy()
+        else:
+            self.sequence = ['L', 'R', 'U', 'D'] # Przykładowa sekwencja
         # todo usunac komentarz na koniec, sequence ma byc argumentem wywolania
         self.step = step
         self.zero = self.find_zero()
@@ -180,10 +182,15 @@ class Node:
         solution.reverse()
         return solution
 
+    def __lt__(self, other): # TODO chyba może być tutaj cokolwiek?
+        return True
+    def __le__(self, other):
+        return True
+
 
 # sprawdza czy osiagnelismy stan docelowy
 def is_goal(board):  # TODO przepisz!!!!
-    if board == State.get_target_board(
+    if board == State.get_target_state(
             board.get_dimension()):  # TODO nie powinno to być generowane przy kazdym sprawdzeniu...
         return True
     return False
@@ -239,22 +246,62 @@ def dfs(start_time, board, additional_param):
     return False
 
 
-def astar(start_time, board, heuristic, additional_param):
-    processed = 1
+class Hamming:
+    def __call__(self, neighbour):
+        diff = 0
+        dimension = neighbour.board.get_dimension()
+        target_state = State.get_target_state(dimension)
+        for y in range(0, dimension):  # TODO da się to uprościć???
+            for x in range(0, dimension):
+                if neighbour.board[y][x] != target_state[y][x] and neighbour.board[y][x] != 0:
+                    diff += 1
+        return diff
+
+
+class Manhattan:
+    def __search_for_position__(self, value, target_state): # value nie może być 0 i musi znajdować się w stanie
+        dimension = target_state.get_dimension()
+        return (value % dimension) - 1, (value - 1) // dimension
+    def __call__(self, neighbour):
+        diff = 0
+        dimension = neighbour.board.get_dimension()
+        target_state = State.get_target_state(dimension)
+        for y in range(0, dimension):  # TODO da się to uprościć???
+            for x in range(0, dimension):
+                if neighbour.board[y][x] != target_state[y][x] and neighbour.board[y][x] != 0:
+                    pos = self.__search_for_position__(neighbour.board[y][x], target_state)
+                    diff += abs(x - pos[0]) + abs(y - pos[1])
+        return diff
+
+def astr(start_time, board, additional_param):
+    heuristics = None
+    if additional_param == 'manh':
+        heuristics = Manhattan()
+    elif additional_param == 'hamm':
+        heuristics = Hamming()
+    else:
+        raise Exception(f"Nieznany akronim heurystyki: {additional_param}")
+
     visited = 1
-    current_node = Node(board, None, [])
-    if is_goal(current_node.board):
-        return current_node.get_solution(), len(current_node.get_solution()), \
-               processed, visited, round((time.process_time() - start_time) * 1000, 3)
-    p = PriorityQueue()
-    t = set()
-    p.put((0, current_node))  # nie jestem pewny czy tak powinno to wygladac
-    while not p.empty():
-        v = p.get()
-        if is_goal(current_node.board):
-            return v.get_solution(), len(current_node.get_solution()), \
-                   processed, visited, round((time.process_time() - start_time) * 1000, 3)
-        t.add(v)
+    processed = 0
+    current_node = Node(board, None, None)
+    open_states = PriorityQueue()
+    max_depth = 1
+    closed_states = set()
+    open_states.put((0, current_node))
+    while open_states:
+        v = open_states.get()[1]
+        processed += 1
+        max_depth = max(max_depth, v.depth)
+        if is_goal(v.board):
+            return v.get_solution(), len(v.get_solution()), \
+                   processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
+        closed_states.add(v)
+        for n in v.get_neighbours():
+            if n not in closed_states:
+                f = heuristics(n)  # TODO tylko n czy board też???
+                open_states.put((f, n))
+    return False
 
 
 def main():
@@ -293,7 +340,7 @@ def main():
         output = dfs(start_time, board, list(args.additional_param))
     elif args.strategy == "astr":
         start_time = time.process_time()
-        # output = astar(start_time, board)
+        output = astr(start_time, board, ''.join(list(args.additional_param)))
 
     # Pozostało zapisać wyniki
     with open(args.save_file, "w") as file:
