@@ -33,7 +33,7 @@ class Arguments:
         self.__validate__()
 
 
-class Board:
+class State:
     target_boards = {}  # dimension: Board
 
     def validate(self):
@@ -62,8 +62,8 @@ class Board:
     def get_target_board(dimension):
         if dimension <= 1:
             raise Exception(f"Nie mozna stworzyc rozwiazanej planszy dla wymiarow {dimension}x{dimension}")
-        if dimension in Board.target_boards:
-            return Board.target_boards[dimension]
+        if dimension in State.target_boards:
+            return State.target_boards[dimension]
         elements = []
         for y in range(0, dimension):
             row = []
@@ -71,8 +71,8 @@ class Board:
                 row.append(y * dimension + x + 1)
             elements.append(row)
         elements[dimension - 1][dimension - 1] = 0
-        Board.target_boards[dimension] = Board(elements)
-        return Board.target_boards[dimension]
+        State.target_boards[dimension] = State(elements)
+        return State.target_boards[dimension]
 
 
 def parse_arguments():
@@ -133,7 +133,7 @@ class Node:
                     neighbour[y + 1][x], neighbour[y][x] = neighbour[y][x], neighbour[y + 1][x]
                 # def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
                 # self.zero = self.find_zero()
-                neighbours[index] = Node(Board(neighbour), self, c, sequence=original_sequence, depth=self.depth + 1)
+                neighbours[index] = Node(State(neighbour), self, c, sequence=original_sequence, depth=self.depth + 1)
                 index += 1
 
         self.zero = self.find_zero()  # TODO można poprawić żeby liczył dla każdego ruchu osobno
@@ -183,7 +183,7 @@ class Node:
 
 # sprawdza czy osiagnelismy stan docelowy
 def is_goal(board):  # TODO przepisz!!!!
-    if board == Board.get_target_board(
+    if board == State.get_target_board(
             board.get_dimension()):  # TODO nie powinno to być generowane przy kazdym sprawdzeniu...
         return True
     return False
@@ -280,7 +280,7 @@ def main():
                 input_nums.pop(0)
             matrix.append(row)
 
-        board = Board(matrix)
+        board = State(matrix)
         board.validate()
 
     output = None
