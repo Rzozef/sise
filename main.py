@@ -68,24 +68,20 @@ def parse_arguments():
 
 
 class Node:
-    def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None, depth=1):
+    def __init__(self, current_puzzle, previous_node, step, *, sequence=None, depth=1):
         # aktualny stan planszy
         self.puzzle = current_puzzle.copy()
 
         # stany do ktorych mozna dojsc po wykonaniu kroku
         # operator wykonany na rodzicu
         self.last_move = step
-        # aktualny ciąg operatorów (rozwiązanie)
-        self.solution = solution.copy()
-        if self.last_move is not None:
-            self.solution.append(step)
         # kolejnosc kroków przy szukaniu rozwiązania
         if sequence is not None:
             self.sequence = sequence.copy()  # SEQUENCE.copy()
         # todo usunac komentarz na koniec, sequence ma byc argumentem wywolania
+        self.step = step
         self.zero = self.find_zero()
-        if previous_puzzle != 'parentless':
-            self.parent = previous_puzzle
+        self.parent = previous_node
         self.depth = depth
 
     def get_neighbours(self): # TODO dodaj obsługę astar (heurystyk)
@@ -112,7 +108,7 @@ class Node:
                     neighbour[y + 1][x], neighbour[y][x] = neighbour[y][x], neighbour[y + 1][x]
                 # def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
                 #self.zero = self.find_zero()
-                neighbours[index] = Node(neighbour, self.puzzle, self.solution, c, sequence=original_sequence, depth=self.depth+1)
+                neighbours[index] = Node(neighbour, self, c, sequence=original_sequence, depth=self.depth+1)
                 index += 1
 
         self.zero = self.find_zero() # TODO można poprawić żeby liczył dla każdego ruchu osobno
@@ -147,6 +143,18 @@ class Node:
                     return {"x": x, "y": y}
         raise Exception("Nie znaleziono zera w ukladance!")
 
+    def get_solution(self):
+        solution = []
+        if self.step is None:
+            return solution
+        solution.append(self.step)
+        parent = self.parent
+        while parent.step is not None:
+            solution.append(parent.step)
+            parent = parent.parent
+        solution.reverse()
+        return solution
+
 
 # sprawdza czy osiagnelismy stan docelowy
 def is_goal(puzzle): # TODO przepisz!!!!
@@ -157,7 +165,7 @@ def is_goal(puzzle): # TODO przepisz!!!!
 def bfs(start_time, board, additional_param):
     visited = 1
     processed = 0
-    current_node = Node(board.elements, 'parentless', [], None, sequence=additional_param)
+    current_node = Node(board.elements, None, None, sequence=additional_param)
     open_states = []
     closed_states = set()
     max_depth = 1
@@ -168,7 +176,7 @@ def bfs(start_time, board, additional_param):
         processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.puzzle):
-            return v.solution, len(v.solution), \
+            return v.get_solution(), len(v.get_solution()), \
                 processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
         if v not in closed_states and v.depth < MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
             closed_states.add(v)
@@ -184,7 +192,7 @@ def bfs(start_time, board, additional_param):
 def dfs(start_time, board, additional_param):
     visited = 1
     processed = 0
-    current_node = Node(board.elements, 'parentless', [], None, sequence=additional_param)
+    current_node = Node(board.elements, None, None, sequence=additional_param)
     open_states = LifoQueue()
     closed_states = set()
     open_states.put(current_node)
@@ -194,7 +202,7 @@ def dfs(start_time, board, additional_param):
         processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.puzzle):
-            return v.solution, len(v.solution), \
+            return v.get_solution(), len(v.get_solution()), \
                 processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
         if v not in closed_states and v.depth < MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
             closed_states.add(v)
@@ -207,9 +215,9 @@ def dfs(start_time, board, additional_param):
 def astar(start_time, board, heuristic, additional_param):
     processed = 1
     visited = 1
-    current_node = Node(board, 'parentless', [], None)
+    current_node = Node(board, None, [], None)
     if is_goal(current_node.puzzle):
-        return current_node.solution, len(current_node.solution), \
+        return current_node.get_solution(), len(current_node.get_solution()), \
                processed, visited, round((time.process_time() - start_time) * 1000, 3)
     p = PriorityQueue()
     t = set()
@@ -217,7 +225,7 @@ def astar(start_time, board, heuristic, additional_param):
     while not p.empty():
         v = p.get()
         if is_goal(current_node.puzzle):
-            return v.solution, len(current_node.solution), \
+            return v.get_solution(), len(current_node.get_solution()), \
                    processed, visited, round((time.process_time() - start_time) * 1000, 3)
         t.add(v)
 
