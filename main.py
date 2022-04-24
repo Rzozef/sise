@@ -1,13 +1,9 @@
 import time
 import argparse
+import math
 from os.path import exists as file_exists
 from queue import LifoQueue, PriorityQueue
 
-# todo program ma byc stosowany do roznych wymiarow tablic, do zmiany pozniej
-SOLVED_PUZZLE = [[1, 2, 3, 4],
-                 [5, 6, 7, 8],
-                 [9, 10, 11, 12],
-                 [13, 14, 15, 0]]
 # todo start_puzzle ma byc argumentem wywolania, narazie na sztywno do testow
 MAX_DEPTH = 25
 
@@ -49,6 +45,31 @@ class Board:
         self.elements = elements
         self.__validate_board()
 
+    def __len__(self):
+        return len(self.elements)
+
+    def __getitem__(self, item):
+        return self.elements[item]
+
+    def __eq__(self, other):
+        return self.elements == other.elements
+
+    def get_dimension(self):
+        return len(self.elements)
+
+    @staticmethod
+    def get_solution_board(dimension):
+        if dimension <= 1:
+            raise Exception(f"Nie mozna stworzyc rozwiazanej planszy dla wymiarow {dimension}x{dimension}")
+        elements = []
+        for y in range(0, dimension):
+            row = []
+            for x in range(0, dimension):
+                row.append(y * dimension + x + 1)
+            elements.append(row)
+        elements[dimension-1][dimension-1] = 0
+        return Board(elements)
+
 
 def parse_arguments():
     arg_parser = argparse.ArgumentParser()
@@ -68,9 +89,9 @@ def parse_arguments():
 
 
 class Node:
-    def __init__(self, current_puzzle, previous_node, step, *, sequence=None, depth=1):
+    def __init__(self, current_board, previous_node, step, *, sequence=None, depth=1):
         # aktualny stan planszy
-        self.puzzle = current_puzzle.copy()
+        self.board = current_board
 
         # stany do ktorych mozna dojsc po wykonaniu kroku
         # operator wykonany na rodzicu
@@ -92,7 +113,7 @@ class Node:
         original_sequence = self.sequence.copy()
         self.block_prohibited_moves()
         for i in range(len(self.sequence)):
-            neighbours.append([row[:] for row in self.puzzle])
+            neighbours.append([row[:] for row in self.board])
 
         if self.sequence is not None:
             index = 0
@@ -108,7 +129,7 @@ class Node:
                     neighbour[y + 1][x], neighbour[y][x] = neighbour[y][x], neighbour[y + 1][x]
                 # def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
                 #self.zero = self.find_zero()
-                neighbours[index] = Node(neighbour, self, c, sequence=original_sequence, depth=self.depth+1)
+                neighbours[index] = Node(Board(neighbour), self, c, sequence=original_sequence, depth=self.depth+1)
                 index += 1
 
         self.zero = self.find_zero() # TODO można poprawić żeby liczył dla każdego ruchu osobno
@@ -129,17 +150,17 @@ class Node:
         # sprawdzamy krańce macierzy stanu i blokujemy wyjście poza granice
         if self.zero["y"] == 0:
             self.sequence.remove('U')
-        elif self.zero["y"] == len(self.puzzle) - 1:
+        elif self.zero["y"] == len(self.board) - 1:
             self.sequence.remove('D')
         if self.zero["x"] == 0:
             self.sequence.remove('L')
-        elif self.zero["x"] == len(self.puzzle) - 1:
+        elif self.zero["x"] == len(self.board) - 1:
             self.sequence.remove('R')
 
     def find_zero(self):
-        for y in range(len(self.puzzle)):
-            for x in range(len(self.puzzle[y])):
-                if self.puzzle[y][x] == 0:
+        for y in range(len(self.board)):
+            for x in range(len(self.board[y])):
+                if self.board[y][x] == 0:
                     return {"x": x, "y": y}
         raise Exception("Nie znaleziono zera w ukladance!")
 
@@ -157,15 +178,15 @@ class Node:
 
 
 # sprawdza czy osiagnelismy stan docelowy
-def is_goal(puzzle): # TODO przepisz!!!!
-    if puzzle == SOLVED_PUZZLE:
+def is_goal(board): # TODO przepisz!!!!
+    if board == Board.get_solution_board(board.get_dimension()): #TODO nie powinno to być generowane przy kazdym sprawdzeniu...
         return True
     return False
 
 def bfs(start_time, board, additional_param):
     visited = 1
     processed = 0
-    current_node = Node(board.elements, None, None, sequence=additional_param)
+    current_node = Node(board, None, None, sequence=additional_param)
     open_states = []
     closed_states = set()
     max_depth = 1
@@ -175,7 +196,7 @@ def bfs(start_time, board, additional_param):
         v = open_states.pop(0)
         processed += 1
         max_depth = max(max_depth, v.depth)
-        if is_goal(v.puzzle):
+        if is_goal(v.board):
             return v.get_solution(), len(v.get_solution()), \
                 processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
         if v not in closed_states and v.depth < MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
@@ -192,7 +213,7 @@ def bfs(start_time, board, additional_param):
 def dfs(start_time, board, additional_param):
     visited = 1
     processed = 0
-    current_node = Node(board.elements, None, None, sequence=additional_param)
+    current_node = Node(board, None, None, sequence=additional_param)
     open_states = LifoQueue()
     closed_states = set()
     open_states.put(current_node)
@@ -201,7 +222,7 @@ def dfs(start_time, board, additional_param):
         v = open_states.get()
         processed += 1
         max_depth = max(max_depth, v.depth)
-        if is_goal(v.puzzle):
+        if is_goal(v.board):
             return v.get_solution(), len(v.get_solution()), \
                 processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
         if v not in closed_states and v.depth < MAX_DEPTH: # TODO <= MAX_DEPTH na pewno w tym miejscu?
@@ -216,7 +237,7 @@ def astar(start_time, board, heuristic, additional_param):
     processed = 1
     visited = 1
     current_node = Node(board, None, [], None)
-    if is_goal(current_node.puzzle):
+    if is_goal(current_node.board):
         return current_node.get_solution(), len(current_node.get_solution()), \
                processed, visited, round((time.process_time() - start_time) * 1000, 3)
     p = PriorityQueue()
@@ -224,7 +245,7 @@ def astar(start_time, board, heuristic, additional_param):
     p.put((0, current_node)) # nie jestem pewny czy tak powinno to wygladac
     while not p.empty():
         v = p.get()
-        if is_goal(current_node.puzzle):
+        if is_goal(current_node.board):
             return v.get_solution(), len(current_node.get_solution()), \
                    processed, visited, round((time.process_time() - start_time) * 1000, 3)
         t.add(v)
