@@ -1,10 +1,8 @@
 import time
 import argparse
-import math
 from os.path import exists as file_exists
 from queue import LifoQueue, PriorityQueue
 
-# todo start_puzzle ma byc argumentem wywolania, narazie na sztywno do testow
 MAX_DEPTH = 25
 
 class Arguments:
