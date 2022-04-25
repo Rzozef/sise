@@ -204,7 +204,7 @@ def bfs(start_time, board, additional_param):
     current_node = Node(board, None, None, sequence=additional_param)
     open_states = []
     closed_states = set()
-    max_depth = 1
+    max_depth = 0
     open_states.append(current_node)
     # pętla zatrzyma sie gdy wszystkie stany otwarte zostaną przetworzone
     while open_states:
@@ -232,7 +232,7 @@ def dfs(start_time, board, additional_param):
     open_states = LifoQueue()
     closed_states = set()
     open_states.put(current_node)
-    max_depth = 1
+    max_depth = 0
     while not open_states.empty():
         v = open_states.get()
         processed += 1
@@ -276,6 +276,19 @@ class Manhattan:
         return diff
 
 
+class Record:
+    def __init__(self, priority, id, node):
+        self.priority = priority
+        self.id = id
+        self.node = node
+
+    def __lt__(self, other):
+        return (self.priority, self.id) < (other.priority, other.id)
+
+    def __le__(self, other):
+        return (self.priority, self.id) <= (other.priority, other.id)
+
+
 def astr(start_time, board, additional_param):
     heuristics = None
     if additional_param == 'manh':
@@ -289,11 +302,11 @@ def astr(start_time, board, additional_param):
     processed = 0
     current_node = Node(board, None, None)
     open_states = PriorityQueue()
-    max_depth = 1
+    max_depth = 0
     closed_states = set()
-    open_states.put((0, current_node))
+    open_states.put(Record(0, processed, current_node))
     while open_states:
-        v = open_states.get()[1]
+        v = open_states.get().node
         processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.state):
@@ -303,7 +316,7 @@ def astr(start_time, board, additional_param):
         for n in v.get_neighbours():
             if n not in closed_states:
                 f = heuristics(n)  # TODO tylko n czy board też???
-                open_states.put((f, n))
+                open_states.put(Record(f, processed, n))
                 visited += 1
     return False
 
