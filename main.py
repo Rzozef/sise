@@ -53,7 +53,14 @@ class State:
         return self.elements[item]
 
     def __eq__(self, other):
-        return self.elements == other.elements
+        for y in range(0, len(self.elements)): # TODO popraw
+            for x in range(0, len(self.elements[0])):
+                if self.elements[y][x] != other.elements[y][x]:
+                    return False
+        return True
+
+    def __hash__(self): #TODO przepisz to
+        return 0
 
     def get_dimension(self):
         return len(self.elements)
@@ -93,7 +100,7 @@ def parse_arguments():
 
 
 class Node:
-    def __init__(self, current_state, previous_node, step, *, sequence=None, depth=1):
+    def __init__(self, current_state, previous_node, step, *, sequence=None, depth=0):
         # aktualny stan planszy
         self.state = current_state
 
@@ -105,13 +112,19 @@ class Node:
             self.sequence = sequence.copy()  # SEQUENCE.copy()
         else:
             self.sequence = ['L', 'R', 'U', 'D'] # Przykładowa sekwencja
-        # todo usunac komentarz na koniec, sequence ma byc argumentem wywolania
+
         self.step = step
         self.zero = self.find_zero()
         self.parent = previous_node
         self.depth = depth
 
-    def get_neighbours(self):  # TODO dodaj obsługę astar (heurystyk)
+    def __eq__(self, other):
+        return self.state == other.state and self.last_move == other.last_move and self.depth == other.depth
+
+    def __hash__(self):
+        return hash(self.state) + hash(self.last_move) + hash(self.depth)
+
+    def get_neighbours(self):
         """Zwraca sąsiadów w kolejności sequence"""
         x = self.zero["x"]
         y = self.zero["y"]
@@ -142,17 +155,6 @@ class Node:
         return neighbours
 
     def block_prohibited_moves(self):
-        # Likwidujemy możliwość cofnięcia ruchu, która sztucznie by wydłużała szukanie rozwiązania
-        # W pierwszej iteracji nie ma czego cofać
-        if self.last_move is not None:
-            if self.last_move == 'L':
-                self.sequence.remove('R')
-            elif self.last_move == 'R':
-                self.sequence.remove('L')
-            elif self.last_move == 'U':
-                self.sequence.remove('D')
-            elif self.last_move == 'D':
-                self.sequence.remove('U')
         # sprawdzamy krańce macierzy stanu i blokujemy wyjście poza granice
         if self.zero["y"] == 0:
             self.sequence.remove('U')
@@ -273,6 +275,7 @@ class Manhattan:
                     diff += abs(x - pos[0]) + abs(y - pos[1])
         return diff
 
+
 def astr(start_time, board, additional_param):
     heuristics = None
     if additional_param == 'manh':
@@ -301,6 +304,7 @@ def astr(start_time, board, additional_param):
             if n not in closed_states:
                 f = heuristics(n)  # TODO tylko n czy board też???
                 open_states.put((f, n))
+                visited += 1
     return False
 
 
