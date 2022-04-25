@@ -93,9 +93,9 @@ def parse_arguments():
 
 
 class Node:
-    def __init__(self, current_board, previous_node, step, *, sequence=None, depth=1):
+    def __init__(self, current_state, previous_node, step, *, sequence=None, depth=1):
         # aktualny stan planszy
-        self.board = current_board
+        self.state = current_state
 
         # stany do ktorych mozna dojsc po wykonaniu kroku
         # operator wykonany na rodzicu
@@ -119,7 +119,7 @@ class Node:
         original_sequence = self.sequence.copy()
         self.block_prohibited_moves()
         for i in range(len(self.sequence)):
-            neighbours.append([row[:] for row in self.board])
+            neighbours.append([row[:] for row in self.state])
 
         if self.sequence is not None:
             index = 0
@@ -156,17 +156,17 @@ class Node:
         # sprawdzamy krańce macierzy stanu i blokujemy wyjście poza granice
         if self.zero["y"] == 0:
             self.sequence.remove('U')
-        elif self.zero["y"] == len(self.board) - 1:
+        elif self.zero["y"] == len(self.state) - 1:
             self.sequence.remove('D')
         if self.zero["x"] == 0:
             self.sequence.remove('L')
-        elif self.zero["x"] == len(self.board) - 1:
+        elif self.zero["x"] == len(self.state) - 1:
             self.sequence.remove('R')
 
     def find_zero(self):
-        for y in range(len(self.board)):
-            for x in range(len(self.board[y])):
-                if self.board[y][x] == 0:
+        for y in range(len(self.state)):
+            for x in range(len(self.state[y])):
+                if self.state[y][x] == 0:
                     return {"x": x, "y": y}
         raise Exception("Nie znaleziono zera w ukladance!")
 
@@ -209,7 +209,7 @@ def bfs(start_time, board, additional_param):
         v = open_states.pop(0)
         processed += 1
         max_depth = max(max_depth, v.depth)
-        if is_goal(v.board):
+        if is_goal(v.state):
             return v.get_solution(), len(v.get_solution()), \
                    processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
         if v not in closed_states and v.depth < MAX_DEPTH:  # TODO <= MAX_DEPTH na pewno w tym miejscu?
@@ -235,7 +235,7 @@ def dfs(start_time, board, additional_param):
         v = open_states.get()
         processed += 1
         max_depth = max(max_depth, v.depth)
-        if is_goal(v.board):
+        if is_goal(v.state):
             return v.get_solution(), len(v.get_solution()), \
                    processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
         if v not in closed_states and v.depth < MAX_DEPTH:  # TODO <= MAX_DEPTH na pewno w tym miejscu?
@@ -249,11 +249,11 @@ def dfs(start_time, board, additional_param):
 class Hamming:
     def __call__(self, neighbour):
         diff = 0
-        dimension = neighbour.board.get_dimension()
+        dimension = neighbour.state.get_dimension()
         target_state = State.get_target_state(dimension)
         for y in range(0, dimension):  # TODO da się to uprościć???
             for x in range(0, dimension):
-                if neighbour.board[y][x] != target_state[y][x] and neighbour.board[y][x] != 0:
+                if neighbour.state[y][x] != target_state[y][x] and neighbour.state[y][x] != 0:
                     diff += 1
         return diff
 
@@ -264,12 +264,12 @@ class Manhattan:
         return (value % dimension) - 1, (value - 1) // dimension
     def __call__(self, neighbour):
         diff = 0
-        dimension = neighbour.board.get_dimension()
+        dimension = neighbour.state.get_dimension()
         target_state = State.get_target_state(dimension)
         for y in range(0, dimension):  # TODO da się to uprościć???
             for x in range(0, dimension):
-                if neighbour.board[y][x] != target_state[y][x] and neighbour.board[y][x] != 0:
-                    pos = self.__search_for_position__(neighbour.board[y][x], target_state)
+                if neighbour.state[y][x] != target_state[y][x] and neighbour.state[y][x] != 0:
+                    pos = self.__search_for_position__(neighbour.state[y][x], target_state)
                     diff += abs(x - pos[0]) + abs(y - pos[1])
         return diff
 
@@ -293,7 +293,7 @@ def astr(start_time, board, additional_param):
         v = open_states.get()[1]
         processed += 1
         max_depth = max(max_depth, v.depth)
-        if is_goal(v.board):
+        if is_goal(v.state):
             return v.get_solution(), len(v.get_solution()), \
                    processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
         closed_states.add(v)
