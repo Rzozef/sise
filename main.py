@@ -240,7 +240,7 @@ def dfs(start_time, board, additional_param):
         if is_goal(v.state):
             return v.get_solution(), len(v.get_solution()), \
                    processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
-        if v not in closed_states and v.depth < MAX_DEPTH:  # TODO <= MAX_DEPTH na pewno w tym miejscu?
+        if v not in closed_states and v.depth < MAX_DEPTH:
             closed_states.add(v)
             for n in list(reversed(v.get_neighbours())):
                 open_states.put(n)
@@ -304,7 +304,7 @@ def astr(start_time, board, additional_param):
     open_states = PriorityQueue()
     max_depth = 0
     closed_states = set()
-    open_states.put(Record(0, processed, current_node))
+    open_states.put(Record(heuristics(current_node), processed, current_node))
     while open_states:
         v = open_states.get().node
         processed += 1
@@ -315,7 +315,7 @@ def astr(start_time, board, additional_param):
         closed_states.add(v)
         for n in v.get_neighbours():
             if n not in closed_states:
-                f = heuristics(n)  # TODO tylko n czy board też???
+                f = n.depth + heuristics(n)
                 open_states.put(Record(f, processed, n))
                 visited += 1
     return False
