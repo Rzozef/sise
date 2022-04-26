@@ -19,10 +19,6 @@ class Arguments:
             raise ValueError("Podany akronim jest błędny")
         if not file_exists(self.source_file):
             raise ValueError("Podany plik zrodlowy nie istnieje")
-        if not file_exists(self.save_file):
-            raise ValueError("Plik do ktorego maja zostac zapisane wyniki nie istnieje")
-        if not file_exists(self.additional_info_file):
-            raise ValueError("Plik do którego mają zostać zapisanme dodatkowe informacje nie istnieje")
 
     def __init__(self, strategy, acronym, source_file, save_file, additional_info_file):
         self.strategy = strategy
@@ -360,7 +356,7 @@ def main():
         output = astr(start_time, board, ''.join(list(args.additional_param)))
 
     # Pozostało zapisać wyniki
-    with open(args.save_file, "w") as file:
+    with open(args.save_file, "w+") as file:
         if not output:
             file.write("-1")
         else:
