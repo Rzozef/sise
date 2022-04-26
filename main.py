@@ -368,7 +368,7 @@ def main():
             file.write(''.join(output[0]))
 
     # I dodatkowe informacje
-    with open(args.additional_info_file, "w") as file:
+    with open(args.additional_info_file, "w+") as file:
         if output is False:
             file.write("-1")
         else:
