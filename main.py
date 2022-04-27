@@ -294,9 +294,9 @@ class Manhattan:
 
 
 class Record:
-    def __init__(self, priority, id, node):
+    def __init__(self, priority, node_id, node):
         self.priority = priority
-        self.id = id
+        self.id = node_id
         self.node = node
 
     def __lt__(self, other):
