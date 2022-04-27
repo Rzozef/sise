@@ -29,6 +29,27 @@ class Arguments:
         self.__validate__()
 
 
+class Output:
+    def __init__(self, solution, states_visited, states_processed, max_recursion_depth, timediff):
+        self.solution_len = str(len(solution))
+        self.solution = ''.join(solution)
+        self.states_visited = str(states_visited)
+        self.states_processed = str(states_processed)
+        self.max_recursion_depth = str(max_recursion_depth)
+        self.rounded_time = str(round(timediff * 1000, 3))
+
+    def get_result(self):
+        return f"{self.solution_len}\n" \
+               f"{self.solution}"
+
+    def get_additional_info(self):
+        return f"{self.solution_len}\n" \
+               f"{self.states_visited}\n" \
+               f"{self.states_processed}\n" \
+               f"{self.max_recursion_depth}\n" \
+               f"{self.rounded_time}"
+
+
 class State:
     target_boards = {}  # dimension: Board
 
@@ -49,13 +70,13 @@ class State:
         return self.elements[item]
 
     def __eq__(self, other):
-        for y in range(0, len(self.elements)): # TODO popraw
+        for y in range(0, len(self.elements)):  # TODO popraw
             for x in range(0, len(self.elements[0])):
                 if self.elements[y][x] != other.elements[y][x]:
                     return False
         return True
 
-    def __hash__(self): #TODO przepisz to
+    def __hash__(self):  # TODO przepisz to
         return 0
 
     def get_dimension(self):
@@ -107,7 +128,7 @@ class Node:
         if sequence is not None:
             self.sequence = sequence.copy()  # SEQUENCE.copy()
         else:
-            self.sequence = ['L', 'R', 'U', 'D'] # Przykładowa sekwencja
+            self.sequence = ['L', 'R', 'U', 'D']  # Przykładowa sekwencja
 
         self.step = step
         self.zero = self.find_zero()
@@ -180,8 +201,9 @@ class Node:
         solution.reverse()
         return solution
 
-    def __lt__(self, other): # TODO chyba może być tutaj cokolwiek?
+    def __lt__(self, other):  # TODO chyba może być tutaj cokolwiek?
         return True
+
     def __le__(self, other):
         return True
 
@@ -208,8 +230,7 @@ def bfs(start_time, board, additional_param):
         processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.state):
-            return v.get_solution(), len(v.get_solution()), \
-                   processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
+            return Output(v.get_solution(), visited, processed, max_depth, time.process_time() - start_time)
         if v not in closed_states and v.depth < MAX_DEPTH:  # TODO <= MAX_DEPTH na pewno w tym miejscu?
             closed_states.add(v)
             neighbours = v.get_neighbours()
@@ -234,8 +255,7 @@ def dfs(start_time, board, additional_param):
         processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.state):
-            return v.get_solution(), len(v.get_solution()), \
-                   processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
+            return Output(v.get_solution(), visited, processed, max_depth, time.process_time() - start_time)
         if v not in closed_states and v.depth < MAX_DEPTH:
             closed_states.add(v)
             for n in list(reversed(v.get_neighbours())):
@@ -257,9 +277,10 @@ class Hamming:
 
 
 class Manhattan:
-    def __search_for_position__(self, value, target_state): # value nie może być 0 i musi znajdować się w stanie
+    def __search_for_position__(self, value, target_state):  # value nie może być 0 i musi znajdować się w stanie
         dimension = target_state.get_dimension()
         return (value % dimension) - 1, (value - 1) // dimension
+
     def __call__(self, neighbour):
         diff = 0
         dimension = neighbour.state.get_dimension()
@@ -306,8 +327,7 @@ def astr(start_time, board, additional_param):
         processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.state):
-            return v.get_solution(), len(v.get_solution()), \
-                   processed, visited, round((time.process_time() - start_time) * 1000, 3), max_depth
+            return Output(v.get_solution(), visited, processed, max_depth, time.process_time() - start_time)
         closed_states.add(v)
         for n in v.get_neighbours():
             if n not in closed_states:
@@ -360,19 +380,21 @@ def main():
         if not output:
             file.write("-1")
         else:
-            file.write(str(output[1]) + '\n')
-            file.write(''.join(output[0]))
+            file.write(output.get_result())
+            # file.write(output. + '\n')
+            # file.write(''.join(output[0]))
 
     # I dodatkowe informacje
     with open(args.additional_info_file, "w+") as file:
         if output is False:
             file.write("-1")
         else:
-            file.write(str(output[1]) + '\n')
-            file.write(str(output[3]) + '\n')
-            file.write(str(output[2]) + '\n')
-            file.write(str(output[5]) + '\n')
-            file.write(str(output[4]) + '\n')
+            file.write(output.get_additional_info())
+            # file.write(str(output[1]) + '\n')
+            # file.write(str(output[3]) + '\n')
+            # file.write(str(output[2]) + '\n')
+            # file.write(str(output[5]) + '\n')
+            # file.write(str(output[4]))
 
     # TODO stworzyć osobną klasę z output, w tej formie jak teraz nie wiadomo ktory argument do czego służy
 
