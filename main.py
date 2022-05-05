@@ -117,17 +117,15 @@ def parse_arguments():
 
 
 class Node:
-    def __init__(self, current_state, previous_node, step, *, sequence=None, depth=0):
+    def __init__(self, current_state, previous_node, last_move, *, sequence=None, depth=0):
         self.state = current_state
 
-        self.last_move = step
+        self.last_move = last_move
         if sequence is not None:
             self.sequence = sequence.copy()
         else:
             self.sequence = ['L', 'R', 'U', 'D']
 
-        self.step = step
-        self.zero = self.find_zero()
         self.parent = previous_node
         self.depth = depth
         self.zero = self.find_zero()
@@ -139,7 +137,6 @@ class Node:
         return hash(self.state) + hash(self.last_move) + hash(self.depth)
 
     def get_neighbours(self):
-        """Zwraca sąsiadów w kolejności sequence"""
         x = self.zero["x"]
         y = self.zero["y"]
         neighbours = []
@@ -184,22 +181,19 @@ class Node:
 
     def get_solution(self):
         solution = []
-        if self.step is None:
+        if self.last_move is None:
             return solution
-        solution.append(self.step)
+        solution.append(self.last_move)
         parent = self.parent
-        while parent.step is not None:
-            solution.append(parent.step)
+        while parent.last_move is not None:
+            solution.append(parent.last_move)
             parent = parent.parent
         solution.reverse()
         return solution
 
 
 def is_goal(board):
-    if board == State.get_target_state(
-            board.get_dimension()):
-        return True
-    return False
+    return board == State.get_target_state(board.get_dimension())
 
 
 def bfs(start_time, board, additional_param):
