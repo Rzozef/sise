@@ -1,5 +1,5 @@
-import time
 import argparse
+import time
 from os.path import exists as file_exists
 from queue import LifoQueue, PriorityQueue
 
@@ -51,12 +51,12 @@ class Output:
 
 
 class State:
-    target_boards = {}  # dimension: Board
+    target_boards = {}
 
     def validate(self):
-        correct_values = set(range(0, len(self.elements) * len(self.elements[0])))  # TODO do poprawy!!!
-        for y in range(0, len(self.elements)):  # Może da się to prościej napisać?
-            for x in range(0, len(self.elements[y])):
+        correct_values = set(range(0, len(self.elements) * len(self.elements[0])))
+        for y in range(len(self.elements)):
+            for x in range(len(self.elements[y])):
                 if self.elements[y][x] not in correct_values:
                     raise ValueError("Plansza zawiera bledne wartości!")
 
@@ -70,14 +70,14 @@ class State:
         return self.elements[item]
 
     def __eq__(self, other):
-        for y in range(0, len(self.elements)):  # TODO popraw
+        for y in range(0, len(self.elements)):
             for x in range(0, len(self.elements[0])):
                 if self.elements[y][x] != other.elements[y][x]:
                     return False
         return True
 
-    def __hash__(self):  # TODO przepisz to
-        return 0
+    def __hash__(self):
+        return hash(tuple(map(tuple, self.elements)))
 
     def get_dimension(self):
         return len(self.elements)
@@ -118,22 +118,19 @@ def parse_arguments():
 
 class Node:
     def __init__(self, current_state, previous_node, step, *, sequence=None, depth=0):
-        # aktualny stan planszy
         self.state = current_state
 
-        # stany do ktorych mozna dojsc po wykonaniu kroku
-        # operator wykonany na rodzicu
         self.last_move = step
-        # kolejnosc kroków przy szukaniu rozwiązania
         if sequence is not None:
-            self.sequence = sequence.copy()  # SEQUENCE.copy()
+            self.sequence = sequence.copy()
         else:
-            self.sequence = ['L', 'R', 'U', 'D']  # Przykładowa sekwencja
+            self.sequence = ['L', 'R', 'U', 'D']
 
         self.step = step
         self.zero = self.find_zero()
         self.parent = previous_node
         self.depth = depth
+        self.zero = self.find_zero()
 
     def __eq__(self, other):
         return self.state == other.state and self.last_move == other.last_move and self.depth == other.depth
@@ -163,16 +160,12 @@ class Node:
                     neighbour[y - 1][x], neighbour[y][x] = neighbour[y][x], neighbour[y - 1][x]
                 elif c == "D":
                     neighbour[y + 1][x], neighbour[y][x] = neighbour[y][x], neighbour[y + 1][x]
-                # def __init__(self, current_puzzle, previous_puzzle, solution, step, *, sequence=None):
-                # self.zero = self.find_zero()
                 neighbours[index] = Node(State(neighbour), self, c, sequence=original_sequence, depth=self.depth + 1)
                 index += 1
 
-        self.zero = self.find_zero()  # TODO można poprawić żeby liczył dla każdego ruchu osobno
         return neighbours
 
     def block_prohibited_moves(self):
-        # sprawdzamy krańce macierzy stanu i blokujemy wyjście poza granice
         if self.zero["y"] == 0:
             self.sequence.remove('U')
         elif self.zero["y"] == len(self.state) - 1:
@@ -201,17 +194,10 @@ class Node:
         solution.reverse()
         return solution
 
-    def __lt__(self, other):  # TODO chyba może być tutaj cokolwiek?
-        return True
 
-    def __le__(self, other):
-        return True
-
-
-# sprawdza czy osiagnelismy stan docelowy
-def is_goal(board):  # TODO przepisz!!!!
+def is_goal(board):
     if board == State.get_target_state(
-            board.get_dimension()):  # TODO nie powinno to być generowane przy kazdym sprawdzeniu...
+            board.get_dimension()):
         return True
     return False
 
@@ -224,14 +210,14 @@ def bfs(start_time, board, additional_param):
     closed_states = set()
     max_depth = 0
     open_states.append(current_node)
-    # pętla zatrzyma sie gdy wszystkie stany otwarte zostaną przetworzone
+
     while open_states:
         v = open_states.pop(0)
         processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.state):
             return Output(v.get_solution(), visited, processed, max_depth, time.process_time() - start_time)
-        if v not in closed_states and v.depth < MAX_DEPTH:  # TODO <= MAX_DEPTH na pewno w tym miejscu?
+        if v not in closed_states and v.depth < MAX_DEPTH:
             closed_states.add(v)
             neighbours = v.get_neighbours()
             for n in neighbours:
@@ -241,7 +227,6 @@ def bfs(start_time, board, additional_param):
     return False
 
 
-# todo przemyslec gdzie wstawic processed i visited
 def dfs(start_time, board, additional_param):
     visited = 1
     processed = 0
@@ -269,7 +254,7 @@ class Hamming:
         diff = 0
         dimension = neighbour.state.get_dimension()
         target_state = State.get_target_state(dimension)
-        for y in range(0, dimension):  # TODO da się to uprościć???
+        for y in range(0, dimension):
             for x in range(0, dimension):
                 if neighbour.state[y][x] != target_state[y][x] and neighbour.state[y][x] != 0:
                     diff += 1
@@ -277,7 +262,8 @@ class Hamming:
 
 
 class Manhattan:
-    def __search_for_position__(self, value, target_state):  # value nie może być 0 i musi znajdować się w stanie
+    @staticmethod
+    def __search_for_position__(value, target_state):
         dimension = target_state.get_dimension()
         return (value % dimension) - 1, (value - 1) // dimension
 
@@ -285,8 +271,8 @@ class Manhattan:
         diff = 0
         dimension = neighbour.state.get_dimension()
         target_state = State.get_target_state(dimension)
-        for y in range(0, dimension):  # TODO da się to uprościć???
-            for x in range(0, dimension):
+        for y in range(dimension):
+            for x in range(dimension):
                 if neighbour.state[y][x] != target_state[y][x] and neighbour.state[y][x] != 0:
                     pos = self.__search_for_position__(neighbour.state[y][x], target_state)
                     diff += abs(x - pos[0]) + abs(y - pos[1])
@@ -307,7 +293,6 @@ class Record:
 
 
 def astr(start_time, board, additional_param):
-    heuristics = None
     if additional_param == 'manh':
         heuristics = Manhattan()
     elif additional_param == 'hamm':
@@ -351,7 +336,6 @@ def main():
 
         del input_nums[:2]
 
-        # Na podstawie wymiarów tworzymy z input macierz o wymiarach podanych w pliku
         matrix = []
         for y in range(dimensions[1]):
             row = []
@@ -364,7 +348,6 @@ def main():
         board.validate()
 
     output = None
-    start_time = None
     if args.strategy == "bfs":
         start_time = time.process_time()
         output = bfs(start_time, board, list(args.additional_param))
@@ -375,28 +358,17 @@ def main():
         start_time = time.process_time()
         output = astr(start_time, board, ''.join(list(args.additional_param)))
 
-    # Pozostało zapisać wyniki
     with open(args.save_file, "w+") as file:
         if not output:
             file.write("-1")
         else:
             file.write(output.get_result())
-            # file.write(output. + '\n')
-            # file.write(''.join(output[0]))
 
-    # I dodatkowe informacje
     with open(args.additional_info_file, "w+") as file:
         if output is False:
             file.write("-1")
         else:
             file.write(output.get_additional_info())
-            # file.write(str(output[1]) + '\n')
-            # file.write(str(output[3]) + '\n')
-            # file.write(str(output[2]) + '\n')
-            # file.write(str(output[5]) + '\n')
-            # file.write(str(output[4]))
-
-    # TODO stworzyć osobną klasę z output, w tej formie jak teraz nie wiadomo ktory argument do czego służy
 
 
 if __name__ == "__main__":
