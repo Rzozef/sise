@@ -265,7 +265,7 @@ class Manhattan:
     @staticmethod
     def __search_for_position__(value, target_state):
         dimension = target_state.get_dimension()
-        return (value % dimension) - 1, (value - 1) // dimension
+        return (value - 1) % dimension, (value - 1) // dimension
 
     def __call__(self, neighbour):
         diff = 0
