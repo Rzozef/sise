@@ -303,6 +303,8 @@ def astr(start_time, board, additional_param):
     open_states.put(Record(heuristics(current_node), processed, current_node))
     while open_states:
         v = open_states.get().node
+        if v in closed_states:
+            continue
         processed += 1
         max_depth = max(max_depth, v.depth)
         if is_goal(v.state):
